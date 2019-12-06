@@ -19,14 +19,28 @@
 
 import { PkStroageLicense, PkStorage, MsLicense } from "@symlinkde/eco-os-pk-models";
 import { injectable } from "inversify";
+import Config from "config";
+import { bootstrapperContainer } from "@symlinkde/eco-os-pk-core";
 import { KeyPair } from "./KeyPair";
-import { storageContainer, STORAGE_TYPES } from "@symlinkde/eco-os-pk-storage";
+import { storageContainer, STORAGE_TYPES, AbstractBindings } from "@symlinkde/eco-os-pk-storage";
 
 @injectable()
-export class KeyService implements PkStroageLicense.IKeyService {
+export class KeyService extends AbstractBindings implements PkStroageLicense.IKeyService {
   private keyRepro: PkStorage.IMongoRepository<KeyPair>;
 
   public constructor() {
+    super(storageContainer);
+
+    this.initDynamicBinding(
+      [STORAGE_TYPES.Database, STORAGE_TYPES.Collection, STORAGE_TYPES.StorageTarget],
+      [Config.get("mongo.db"), Config.get("mongo.collection"), "SECONDLOCK_MONGO_LICENSE_DATA"],
+    );
+
+    this.initStaticBinding(
+      [STORAGE_TYPES.SECONDLOCK_REGISTRY_URI],
+      [bootstrapperContainer.get("SECONDLOCK_REGISTRY_URI")],
+    );
+
     this.keyRepro = storageContainer.getTagged<PkStorage.IMongoRepository<KeyPair>>(
       STORAGE_TYPES.IMongoRepository,
       STORAGE_TYPES.STATE_LESS,
